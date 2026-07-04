@@ -1,10 +1,10 @@
 langchain
 langchain-community
-langchain-anthropic
+langchain-groq
 langchain-huggingface
+langchain-core
 chromadb
 pypdf
 sentence-transformers
 python-dotenv
 streamlit
-langchain-google-genai
