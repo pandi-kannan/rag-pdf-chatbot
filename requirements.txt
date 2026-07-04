@@ -1,0 +1,10 @@
+langchain
+langchain-community
+langchain-anthropic
+langchain-huggingface
+chromadb
+pypdf
+sentence-transformers
+python-dotenv
+streamlit
+langchain-google-genai
