@@ -15,13 +15,19 @@ Usage:
 import os
 import chromadb
 from dotenv import load_dotenv
+import streamlit as st
 
+load_dotenv()
+
+# Make Groq key available whether running locally (.env) or deployed (Streamlit secrets)
+if "GROQ_API_KEY" not in os.environ and hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
+    os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+    
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
-load_dotenv()  # reads ANTHROPIC_API_KEY from .env
 
 PERSIST_DIR = "chroma_db"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
