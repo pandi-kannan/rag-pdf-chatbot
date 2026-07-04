@@ -45,17 +45,26 @@ def split_into_chunks(pages, chunk_size: int = 800, chunk_overlap: int = 120):
     return chunks
 
 
-def build_vector_store(chunks, persist_dir: str = PERSIST_DIR):
-    """Embed each chunk and store it in a persistent Chroma vector database."""
+def build_vector_store(chunks, collection_name: str, persist_dir: str = PERSIST_DIR):
+    """Embed each chunk and store it in its own isolated Chroma collection,
+    so different PDFs never mix together."""
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
     vectordb = Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
+        collection_name=collection_name,
         persist_directory=persist_dir,
     )
-    print(f"Vector store built and saved to ./{persist_dir}")
+    print(f"Vector store built for collection '{collection_name}' and saved to ./{persist_dir}")
     return vectordb
+
+
+def sanitize_collection_name(filename: str) -> str:
+    """Turn a filename into a safe collection name (letters, numbers, underscores only)."""
+    name = os.path.splitext(os.path.basename(filename))[0]
+    safe = "".join(c if c.isalnum() else "_" for c in name)
+    return safe.lower()[:60]  # Chroma has a length limit on collection names
 
 
 def main():
@@ -66,11 +75,14 @@ def main():
     if not os.path.exists(args.pdf):
         raise FileNotFoundError(f"No such file: {args.pdf}")
 
+    collection_name = sanitize_collection_name(args.pdf)
+
     pages = load_pdf(args.pdf)
     chunks = split_into_chunks(pages)
-    build_vector_store(chunks)
+    build_vector_store(chunks, collection_name=collection_name)
 
-    print("\nIngestion complete. You can now run: python src/query.py")
+    print(f"\nIngestion complete. Collection name: '{collection_name}'")
+    print(f"You can now run: python src/query.py --collection {collection_name}")
 
 
 if __name__ == "__main__":

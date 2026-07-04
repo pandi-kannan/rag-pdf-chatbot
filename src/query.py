@@ -13,6 +13,7 @@ Usage:
 """
 
 import os
+import chromadb
 from dotenv import load_dotenv
 
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -38,10 +39,20 @@ Question: {question}
 Answer:"""
 
 
-def load_vector_store(persist_dir: str = PERSIST_DIR):
+def load_vector_store(collection_name: str, persist_dir: str = PERSIST_DIR):
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    vectordb = Chroma(persist_directory=persist_dir, embedding_function=embeddings)
+    vectordb = Chroma(
+        collection_name=collection_name,
+        persist_directory=persist_dir,
+        embedding_function=embeddings,
+    )
     return vectordb
+
+
+def list_collections(persist_dir: str = PERSIST_DIR):
+    """List all document collections currently stored."""
+    client = chromadb.PersistentClient(path=persist_dir)
+    return [c.name for c in client.list_collections()]
 
 
 def retrieve_context(vectordb, question: str, k: int = TOP_K):
@@ -78,11 +89,33 @@ def answer_question(vectordb, question: str, show_sources: bool = True):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Query a RAG collection.")
+    parser.add_argument("--collection", required=False, help="Which document's collection to query")
+    args = parser.parse_args()
+
     if not os.path.exists(PERSIST_DIR):
         print("No vector store found. Run ingest.py first:")
         print("  python src/ingest.py --pdf data/yourfile.pdf")
         return
-    vectordb = load_vector_store()
+
+    collection_name = args.collection
+    if not collection_name:
+        available = list_collections()
+        if not available:
+            print("No collections found. Run ingest.py first.")
+            return
+        if len(available) == 1:
+            collection_name = available[0]
+            print(f"Using collection: '{collection_name}'")
+        else:
+            print("Multiple documents found. Choose one:")
+            for i, name in enumerate(available, 1):
+                print(f"  {i}. {name}")
+            choice = input("Enter number: ").strip()
+            collection_name = available[int(choice) - 1]
+
+    vectordb = load_vector_store(collection_name)
     print("RAG chatbot ready. Type 'exit' to quit.\n")
 
     while True:
